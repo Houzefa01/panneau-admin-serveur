@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Accès console — Panneau d'administration</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <form class="login-card" id="login-form" autocomplete="off">
+      <div class="login-head">
+        <span class="stencil">console · accès restreint</span>
+        <span class="leds">
+          <span class="led on"></span><span class="led"></span><span class="led"></span>
+        </span>
+      </div>
+      <div class="login-body">
+        <h1>Authentification requise</h1>
+        <p class="prompt"><b>login:</b> identifiez-vous pour prendre la main<span class="cursor"></span></p>
+
+        <label class="stencil" for="username">Identifiant</label>
+        <input type="text" id="username" name="username" autocomplete="username" required autofocus spellcheck="false">
+
+        <label class="stencil" for="password">Mot de passe</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+
+        <button type="submit" class="primary" id="submit-btn">Établir la session</button>
+        <div class="error-msg" id="error" role="alert"></div>
+      </div>
+    </form>
+  </div>
+  <script type="module" src="/js/login.js"></script>
+</body>
+</html>

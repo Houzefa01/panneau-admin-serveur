@@ -1,0 +1,48 @@
+# Service systemd pour le panneau d'administration — déploiement LAN + HTTPS.
+#
+# Le service tourne sous un compte NON-ROOT dédié (« panel »). Le terminal admin,
+# le gestionnaire de fichiers et les Vitals s'exécutent donc avec des droits
+# limités. Quand une action exige root (écrire hors des dossiers autorisés,
+# systemctl, reboot…), le panneau demande une ÉLÉVATION ponctuelle : l'admin
+# saisit un mot de passe root, utilisé via `su` pour cette action uniquement
+# (TTL 15 min, jamais journalisé). Voir SECURITY.md / DEPLOIEMENT.md.
+#
+# Pré-requis : créer le compte + donner les droits aux fichiers de l'appli
+#   (voir DEPLOIEMENT.md §3). Installation :
+#   sudo cp systemd/admin-panel.service /etc/systemd/system/admin-panel.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now admin-panel
+
+[Unit]
+Description=Panneau d'administration serveur (non-root + élévation ; LAN HTTPS)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=panel
+Group=panel
+WorkingDirectory=/opt/admin-panel
+EnvironmentFile=/opt/admin-panel/.env
+ExecStart=/usr/bin/node server/index.js
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=65536
+
+# ⚠️ NE PAS activer NoNewPrivileges=yes : il casserait l'élévation `su`
+# (impossible de passer root), qui est le mécanisme central de ce mode non-root.
+# De même, ProtectSystem=/ProtectHome=/ReadOnlyPaths restent DÉSACTIVÉS : le but
+# du panneau est d'administrer la machine (écritures système via élévation).
+# Le durcissement repose sur : compte non privilégié + TLS + mot de passe fort +
+# pare-feu réseau (voir DEPLOIEMENT.md §6).
+
+# Port < 1024 (ex. 443) : un compte non-root ne peut pas s'y lier sans capacité.
+# Dans ce cas seulement, dé-commentez la ligne suivante :
+# AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+# Quotas CPU/RAM des éditeurs (cgroups via systemd-run --user). Optionnel :
+# nécessite « loginctl enable-linger panel ». Dé-commentez alors :
+# Environment=XDG_RUNTIME_DIR=/run/user/%U
+
+[Install]
+WantedBy=multi-user.target

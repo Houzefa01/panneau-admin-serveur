@@ -1,0 +1,33 @@
+{
+  "name": "serveur-admin-panel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Panneau d'administration web pour serveur Debian 12 personnel (LAN HTTPS ; tunnel Cloudflare optionnel)",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "hash": "node scripts/hash-password.js",
+    "gen-cert": "node scripts/gen-cert.js",
+    "test": "node --test test/*.test.js",
+    "verify": "node scripts/verify.js"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
+    "archiver": "7.0.1",
+    "bcrypt": "6.0.0",
+    "dotenv": "17.4.2",
+    "express": "5.2.1",
+    "express-rate-limit": "8.5.2",
+    "express-session": "1.19.0",
+    "helmet": "8.2.0",
+    "multer": "2.2.0",
+    "node-pty": "1.1.0",
+    "systeminformation": "5.31.7",
+    "ws": "8.21.0"
+  }
+}

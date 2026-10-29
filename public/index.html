@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Panneau d'administration</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/vendor/xterm/css/xterm.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="dot"></span>
+        <div>
+          <div class="name" id="hostname">serveur</div>
+          <div class="unit" id="brand-sub">console d'admin</div>
+        </div>
+      </div>
+      <nav class="nav" id="nav">
+        <button data-view="dashboard" class="active"><span class="ico">▢</span> Vitals</button>
+        <button data-view="terminal" data-role="terminal"><span class="ico">›_</span> Terminal</button>
+        <button data-view="files"><span class="ico">▤</span> Fichiers</button>
+        <button data-view="services" data-role="admin"><span class="ico">⚙</span> Services</button>
+        <button data-view="users" data-role="admin"><span class="ico">⚇</span> Utilisateurs</button>
+        <button data-view="logs" data-role="admin"><span class="ico">▦</span> Journal</button>
+        <button data-view="profile"><span class="ico">◎</span> Profil</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div id="uptime-foot">—</div>
+        <button id="sudo-state" class="lockbtn locked" title="État des privilèges administrateur"><span class="ico" data-icon="lock"></span><span>Privilèges verrouillés</span></button>
+        <button id="logout-btn" class="danger">Se déconnecter</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <!-- Dashboard / Vitals -->
+      <section class="view active" id="view-dashboard">
+        <div class="frontpanel">
+          <div class="fp-id">
+            <span class="stencil">Unité</span>
+            <span class="hosttag" id="panel-host">—</span>
+          </div>
+          <div class="scope-well">
+            <span class="scope-label stencil">CPU · charge en direct</span>
+            <canvas id="cpu-scope"></canvas>
+            <span class="scope-read" id="scope-pct">--<i>%</i></span>
+          </div>
+          <div class="fp-readouts">
+            <div class="readout"><span class="stencil">Disponibilité</span><span class="readout-val" id="vital-uptime">--</span></div>
+            <div class="readout"><span class="stencil">Charge 1 min</span><span class="readout-val" id="vital-load">--</span></div>
+            <div class="readout"><span class="stencil">Température</span><span class="readout-val" id="vital-temp">--</span></div>
+            <div class="leds" id="panel-leds"></div>
+          </div>
+        </div>
+        <div class="bays" id="stats-grid"><div class="boot">Initialisation des capteurs…</div></div>
+        <div class="fp-foot"><span class="stencil">Dernière mesure</span><span id="stats-ts">—</span></div>
+      </section>
+
+      <!-- Terminal (multi-sessions) -->
+      <section class="view" id="view-terminal">
+        <div class="term-bar">
+          <div class="tabbar" id="term-tabs"></div>
+          <button id="term-new" class="tab-new" title="Nouveau terminal">+ Terminal</button>
+        </div>
+        <div class="term-stack" id="term-stack"></div>
+      </section>
+
+      <!-- Files (navigateur + éditeur multi-onglets) -->
+      <section class="view" id="view-files">
+        <div class="view-head">
+          <h2>Gestionnaire de fichiers</h2>
+        </div>
+        <div class="files-toolbar">
+          <button id="f-up" title="Dossier parent"><span class="ico" data-icon="level-up"></span><span>Parent</span></button>
+          <input class="path-bar" id="f-path" spellcheck="false">
+          <button id="f-go">Aller</button>
+          <button id="f-refresh" title="Actualiser"><span class="ico" data-icon="refresh"></span></button>
+          <button id="f-mkdir"><span class="ico" data-icon="folder-plus"></span><span>Dossier</span></button>
+          <button id="f-newfile"><span class="ico" data-icon="file-plus"></span><span>Fichier</span></button>
+          <button id="f-upload"><span class="ico" data-icon="upload"></span><span>Upload</span></button>
+          <input type="file" id="f-fileinput" multiple hidden>
+          <span class="clipboard-info" id="f-clip"></span>
+        </div>
+        <div class="dropzone" id="f-drop">
+          <table class="files-table">
+            <thead>
+              <tr><th>Nom</th><th class="size">Taille</th><th class="mtime">Modifié</th><th></th></tr>
+            </thead>
+            <tbody id="f-tbody"></tbody>
+          </table>
+          <div class="empty" id="f-empty" hidden>Dossier vide.</div>
+        </div>
+      </section>
+
+      <!-- Services -->
+      <section class="view" id="view-services">
+        <div class="view-head">
+          <h2>Services systemd</h2>
+          <div class="actions">
+            <input class="filter-input" id="svc-filter" placeholder="Filtrer…" spellcheck="false">
+            <button id="svc-refresh"><span class="ico" data-icon="refresh"></span><span>Rafraîchir</span></button>
+            <button id="svc-reboot" class="danger"><span class="ico" data-icon="power"></span><span>Redémarrer la machine</span></button>
+          </div>
+        </div>
+        <table class="svc-table">
+          <thead>
+            <tr><th>Unité</th><th>État</th><th>Sub</th><th>Description</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="svc-tbody"><tr><td colspan="5" class="loading">Chargement…</td></tr></tbody>
+        </table>
+      </section>
+
+      <!-- Journal d'activité (admin) -->
+      <section class="view" id="view-logs">
+        <div class="view-head">
+          <h2>Journal d'activité</h2>
+          <div class="actions">
+            <select id="log-user" class="filter-input"><option value="*">Tous les utilisateurs</option></select>
+            <select id="log-event" class="filter-input"><option value="*">Tous les événements</option></select>
+            <input id="log-q" class="filter-input" placeholder="Recherche…" spellcheck="false">
+            <label class="muted" style="display:flex;align-items:center;gap:5px;font-size:11px"><input type="checkbox" id="log-auto" style="width:auto"> auto</label>
+            <button id="log-refresh" title="Actualiser"><span class="ico" data-icon="refresh"></span></button>
+            <button id="log-raw"><span class="ico" data-icon="download"></span><span>brut</span></button>
+          </div>
+        </div>
+        <table class="svc-table">
+          <thead>
+            <tr><th>Horodatage</th><th>Utilisateur</th><th>Rôle</th><th>Événement</th><th>Détails</th><th>IP</th></tr>
+          </thead>
+          <tbody id="log-tbody"><tr><td colspan="6" class="loading">Chargement…</td></tr></tbody>
+        </table>
+      </section>
+
+      <!-- Profil -->
+      <section class="view" id="view-profile">
+        <div class="view-head"><h2>Profil</h2></div>
+        <div class="grid">
+          <div class="card">
+            <h3>Compte connecté</h3>
+            <div class="rows">
+              <div class="row"><span>Identifiant</span><b id="pf-user">—</b></div>
+              <div class="row"><span>Rôle</span><b id="pf-role">—</b></div>
+              <div class="row"><span>Dossier autorisé</span><b id="pf-root">—</b></div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Changer mon mot de passe</h3>
+            <form id="pf-form" class="stackform" autocomplete="off">
+              <label class="stencil" for="pf-current">Mot de passe actuel</label>
+              <input type="password" id="pf-current" autocomplete="current-password" required>
+              <label class="stencil" for="pf-new">Nouveau mot de passe</label>
+              <input type="password" id="pf-new" autocomplete="new-password" minlength="6" required>
+              <label class="stencil" for="pf-confirm">Confirmer</label>
+              <input type="password" id="pf-confirm" autocomplete="new-password" required>
+              <button type="submit" class="primary">Mettre à jour</button>
+              <div class="error-msg" id="pf-msg"></div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- Utilisateurs (admin) -->
+      <section class="view" id="view-users">
+        <div class="view-head">
+          <h2>Utilisateurs</h2>
+          <div class="actions">
+            <button id="u-refresh"><span class="ico" data-icon="refresh"></span><span>Rafraîchir</span></button>
+            <button id="u-add" class="primary"><span class="ico" data-icon="user-plus"></span><span>Nouvel utilisateur</span></button>
+          </div>
+        </div>
+        <table class="svc-table">
+          <thead>
+            <tr><th>Identifiant</th><th>Rôle</th><th>Dossier autorisé</th><th>Créé par</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="u-tbody"><tr><td colspan="6" class="loading">Chargement…</td></tr></tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
+  <!-- Éditeur de fichiers (surcouche multi-onglets) -->
+  <div class="modal-backdrop" id="editor-modal">
+    <div class="modal editor">
+      <div class="modal-head">
+        <div class="tabbar" id="editor-tabs"></div>
+        <button id="editor-close" title="Fermer l'éditeur"><span class="ico" data-icon="close"></span></button>
+      </div>
+      <div class="modal-body"><textarea id="editor-text" spellcheck="false" wrap="off"></textarea></div>
+      <div class="modal-foot">
+        <span class="muted" id="editor-status"></span>
+        <button id="editor-save" class="primary">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menu contextuel (clic droit) -->
+  <div class="ctxmenu" id="ctxmenu" hidden></div>
+
+  <!-- Elevation modal -->
+  <div class="modal-backdrop" id="sudo-modal">
+    <div class="modal sudo">
+      <div class="modal-head">
+        <span class="title"><span class="ico" data-icon="lock"></span> Élévation de privilèges</span>
+        <button id="sudo-close" title="Fermer"><span class="ico" data-icon="close"></span></button>
+      </div>
+      <div class="modal-body sudo-body">
+        <p class="muted">Cette action requiert les droits administrateur. Saisissez un compte privilégié (par défaut <b>root</b>) et son mot de passe. Les droits restent actifs ~15 min.</p>
+        <label class="stencil" for="sudo-user">Utilisateur</label>
+        <input type="text" id="sudo-user" value="root" spellcheck="false" autocomplete="username">
+        <label class="stencil" for="sudo-pass">Mot de passe</label>
+        <input type="password" id="sudo-pass" autocomplete="current-password">
+        <div class="error-msg" id="sudo-err"></div>
+      </div>
+      <div class="modal-foot">
+        <button id="sudo-cancel">Annuler</button>
+        <button id="sudo-ok" class="primary">Déverrouiller</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- User add/edit modal -->
+  <div class="modal-backdrop" id="user-modal">
+    <div class="modal sudo">
+      <div class="modal-head">
+        <span class="title" id="user-modal-title">Nouvel utilisateur</span>
+        <button id="user-close" title="Fermer"><span class="ico" data-icon="close"></span></button>
+      </div>
+      <div class="modal-body sudo-body">
+        <input type="hidden" id="user-id">
+        <label class="stencil" for="user-username">Identifiant</label>
+        <input type="text" id="user-username" spellcheck="false" autocomplete="off">
+        <label class="stencil" for="user-password">Mot de passe <span id="user-pw-hint" class="muted"></span></label>
+        <input type="password" id="user-password" autocomplete="new-password">
+        <label class="stencil" for="user-role">Rôle</label>
+        <select id="user-role">
+          <option value="lecteur">Lecteur — lire / télécharger uniquement</option>
+          <option value="editeur">Éditeur — lire / modifier (dossier + quotas)</option>
+          <option value="admin">Administrateur — contrôle total</option>
+        </select>
+        <div id="user-root-wrap">
+          <label class="stencil" for="user-root">Dossier autorisé (racine)</label>
+          <input type="text" id="user-root" spellcheck="false" placeholder="/home/…/projet">
+        </div>
+        <div id="user-quota-wrap" class="quota-grid">
+          <div><label class="stencil" for="user-cpu">CPU (cœurs)</label><input type="number" id="user-cpu" min="0.25" step="0.25" value="1"></div>
+          <div><label class="stencil" for="user-mem">RAM (Mo)</label><input type="number" id="user-mem" min="64" step="64" value="512"></div>
+          <div><label class="stencil" for="user-sto">Stockage (Mo)</label><input type="number" id="user-sto" min="1" step="64" value="1024"></div>
+          <div class="quota-hint muted" id="user-quota-hint"></div>
+        </div>
+        <div class="error-msg" id="user-err"></div>
+      </div>
+      <div class="modal-foot">
+        <button id="user-cancel">Annuler</button>
+        <button id="user-save" class="primary">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+
+  <script src="/vendor/xterm/lib/xterm.js"></script>
+  <script src="/vendor/addon-fit/lib/addon-fit.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

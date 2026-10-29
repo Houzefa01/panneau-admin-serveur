@@ -1,0 +1,25 @@
+# Configuration cloudflared — EXEMPLE, NON ACTIVÉ.
+#
+# À copier vers /etc/cloudflared/config.yml le jour où vous mettrez le tunnel
+# en place. Voir cloudflare/README.md pour la procédure complète.
+#
+# L'origine du panneau tourne en HTTPS (certificat auto-signé) sur la boucle
+# locale -> service: https://127.0.0.1:3000 + noTLSVerify: true.
+# Le trafic reste chiffré de bout en bout (utilisateur -> Cloudflare -> tunnel
+# -> 127.0.0.1). Le certificat local n'est simplement pas validé par cloudflared.
+
+tunnel: <ID-DE-VOTRE-TUNNEL>
+credentials-file: /etc/cloudflared/<ID-DE-VOTRE-TUNNEL>.json
+
+ingress:
+  - hostname: admin.example.com           # <-- votre hostname Cloudflare
+    service: https://127.0.0.1:3000
+    originRequest:
+      # Origine en certificat auto-signé sur la boucle locale.
+      noTLSVerify: true
+      # La WebSocket du terminal a besoin de connexions longues.
+      connectTimeout: 30s
+      # Flux terminal temps réel : pas de découpage forcé.
+      disableChunkedEncoding: false
+  # Règle de repli obligatoire (tout le reste -> 404).
+  - service: http_status:404
